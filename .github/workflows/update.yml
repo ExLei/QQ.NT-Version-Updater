@@ -46,14 +46,15 @@ jobs:
           echo "Current version: $CURRENT_VERSION"
           echo "Current URL: $CURRENT_URL"
 
-          CDN_HOST="cdn-go.cn"
+          CDN_URL="https://cdn-go.cn/qq-web/im.qq.com_new/latest/rainbow/windowsConfig.js"
           IP=$(dig +short cdn-go.cn.cloud.tc.qq.com A 2>/dev/null | head -1)
 
+          CURL_ARGS=(-fsSL)
           if [[ -n "$IP" ]]; then
-              CONTENT=$(curl -fsSL -H "Host: $CDN_HOST" "https://$IP/qq-web/im.qq.com_new/latest/rainbow/windowsConfig.js")
-          else
-              CONTENT=$(curl -fsSL "https://$CDN_HOST/qq-web/im.qq.com_new/latest/rainbow/windowsConfig.js")
+              CURL_ARGS+=(--resolve "cdn-go.cn:443:$IP")
+              echo "Using resolved IP: $IP"
           fi
+          CONTENT=$(curl "${CURL_ARGS[@]}" "$CDN_URL")
 
           JSON_STR=$(echo "$CONTENT" | sed -n 's/.*var params\s*=\s*\({.*}\)\s*;.*/\1/p')
           if [[ -z "$JSON_STR" ]]; then
