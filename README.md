@@ -5,19 +5,36 @@
 
 自动追踪 [QQ NT (Windows)](https://im.qq.com/) 安装包版本，通过 GitHub Actions 每小时检查更新，自动发布 Release。
 
-本仓库为通用版本追踪仓库，提供安装包、版本号、SHA256 哈希值等信息，可供任何包管理器（Scoop、Winget 等）或自动化工具使用。
+本仓库为通用版本追踪仓库，提供安装包、多格式哈希值、结构化元数据，可供任何包管理器（Scoop、Winget、Chocolatey 等）或自动化工具使用。
 
-## Release 内容
+## Release Assets
 
-每个 Release 包含：
+每个 Release 包含以下文件：
 
-| 字段 | 说明 |
+| 文件 | 说明 |
 |------|------|
-| **安装包** | `QQ_{版本号}_x64.exe`，从腾讯官方 CDN 下载 |
-| **Version** | 版本号，如 `9.9.31.260528` |
-| **Download URL** | 官方下载链接 |
-| **SHA256** | 安装包 SHA256 哈希值（全小写） |
-| **Last Modified** | 安装包在 CDN 上的最后修改时间 |
+| `QQ_{版本号}_x64.exe` | QQ NT 安装包（从腾讯官方 CDN 下载） |
+| `QQ_{版本号}_x64.exe.sha256` | SHA256 校验文件（兼容 `sha256sum -c`） |
+| `QQ_{版本号}_x64.exe.sha1` | SHA1 校验文件（兼容 `sha1sum -c`） |
+| `QQ_{版本号}_x64.exe.md5` | MD5 校验文件（兼容 `md5sum -c`） |
+| `metadata.json` | 结构化元数据（JSON 格式） |
+
+## metadata.json 格式
+
+```json
+{
+  "version": "9.9.31.260528",
+  "url": "https://qqdl.gtimg.cn/qqfile/QQNT/9.9.31/release/092069d7/QQ_9.9.31_260528_x64_01.exe",
+  "filename": "QQ_9.9.31.260528_x64.exe",
+  "size": 314572800,
+  "hashes": {
+    "sha256": "0beb5cb4ff776cba822caa0abadbd53f5892f12628a86dabea1b372c82c086bc",
+    "sha1": "a1b2c3d4e5f6...",
+    "md5": "d41d8cd98f00..."
+  },
+  "last_modified": "Thu, 28 May 2026 02:17:54 GMT"
+}
+```
 
 ## 版本号格式
 
@@ -42,34 +59,52 @@ QQ_9.9.31_260528_x64_01.exe
   │    ├─ 版本相同 → 结束 ✅
   │    └─ 版本不同 ↓
   │
-  └─ 下载安装包 → 计算 SHA256 → 创建 GitHub Release
+  └─ 下载安装包 → 计算多格式哈希 → 生成校验文件和元数据 → 创建 GitHub Release
 ```
 
 ## 使用方式
 
-### 通过 GitHub API 获取最新版本
+### 通过 GitHub API 获取最新版本信息
 
 ```bash
-# 获取最新 Release 信息
+# 获取最新 Release 完整信息
 curl -s https://api.github.com/repos/ExLei/QQ.NT-windows-Updater/releases/latest
 
 # 仅获取版本号
 curl -s https://api.github.com/repos/ExLei/QQ.NT-windows-Updater/releases/latest | jq -r '.tag_name | ltrimstr("v")'
 
-# 仅获取 SHA256
-curl -s https://api.github.com/repos/ExLei/QQ.NT-windows-Updater/releases/latest | jq -r '.body' | grep 'SHA256' | awk '{print $2}'
+# 下载 metadata.json 并提取 SHA256
+curl -sLO $(curl -s https://api.github.com/repos/ExLei/QQ.NT-windows-Updater/releases/latest | jq -r '.assets[] | select(.name=="metadata.json") | .browser_download_url')
+cat metadata.json | jq -r '.hashes.sha256'
 ```
 
-### Scoop
+### 校验安装包完整性
+
+```bash
+# 下载校验文件和安装包
+curl -sLO https://github.com/ExLei/QQ.NT-windows-Updater/releases/latest/download/QQ_9.9.31.260528_x64.exe.sha256
+curl -sLO https://github.com/ExLei/QQ.NT-windows-Updater/releases/latest/download/QQ_9.9.31.260528_x64.exe
+
+# 校验
+sha256sum -c QQ_9.9.31.260528_x64.exe.sha256
+```
+
+### 包管理器集成
+
+#### Scoop
 
 ```powershell
 scoop bucket add exlei https://github.com/Exlei/Scoop-Bucket
 scoop install exlei/Tencent.QQ.NT
 ```
 
-### Winget
+#### Winget
 
-可基于本仓库的 Release 信息创建 Winget 清单，参考 [Winget 包规范](https://learn.microsoft.com/en-us/windows/package-manager/package/)。
+可基于 `metadata.json` 中的 `hashes.sha256` 创建 Winget 清单，参考 [Winget 包规范](https://learn.microsoft.com/en-us/windows/package-manager/package/)。
+
+#### Chocolatey
+
+可基于 `metadata.json` 中的 `hashes.sha256` 创建 nuspec 包，参考 [Chocolatey 包规范](https://docs.chocolatey.org/en-us/create/create-packages)。
 
 ## 免责声明
 
