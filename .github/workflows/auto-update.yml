@@ -48,10 +48,10 @@ jobs:
               exit 1
           fi
 
-          # 提取三架构下载 URL
+          # 提取三架构下载 URL（注意：x86 字段为 ntDownloadUrl，arm64 字段为 ntDownloadARMUrl）
           X64_URL=$(echo "$JSON_STR" | jq -r '.ntDownloadX64Url')
-          X86_URL=$(echo "$JSON_STR" | jq -r '.ntDownloadX86Url')
-          ARM64_URL=$(echo "$JSON_STR" | jq -r '.ntDownloadArm64Url')
+          X86_URL=$(echo "$JSON_STR" | jq -r '.ntDownloadUrl')
+          ARM64_URL=$(echo "$JSON_STR" | jq -r '.ntDownloadARMUrl')
 
           if [[ -z "$X64_URL" || "$X64_URL" == "null" ]]; then
               echo "::error::No x64 download URL found"
